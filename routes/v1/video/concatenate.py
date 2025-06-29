@@ -42,6 +42,18 @@ logger = logging.getLogger(__name__)
             },
             "minItems": 1
         },
+        "transitions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string", "enum": ["crossfade", "fade", "wipe", "slide", "none"]},
+                    "duration": {"type": "number", "minimum": 0.1, "maximum": 10.0}
+                },
+                "required": ["type"],
+                "additionalProperties": False
+            }
+        },
         "webhook_url": {"type": "string", "format": "uri"},
         "id": {"type": "string"}
     },
@@ -51,13 +63,14 @@ logger = logging.getLogger(__name__)
 @queue_task_wrapper(bypass_queue=False)
 def combine_videos(job_id, data):
     media_urls = data['video_urls']
+    transitions = data.get('transitions', [])
     webhook_url = data.get('webhook_url')
     id = data.get('id')
 
-    logger.info(f"Job {job_id}: Received combine-videos request for {len(media_urls)} videos")
+    logger.info(f"Job {job_id}: Received combine-videos request for {len(media_urls)} videos with {len(transitions)} transitions")
 
     try:
-        output_file = process_video_concatenate(media_urls, job_id)
+        output_file = process_video_concatenate(media_urls, job_id, transitions)
         logger.info(f"Job {job_id}: Video combination process completed successfully")
 
         cloud_url = upload_file(output_file)
